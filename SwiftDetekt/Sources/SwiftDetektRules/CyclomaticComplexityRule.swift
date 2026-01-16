@@ -32,13 +32,13 @@ class FunctionFinderVisitor: SyntaxVisitor {
         let calculator = ComplexityCalculator()
         calculator.walk(node)
         
-        // Threshold should come from config, hardcoded to 10 for now
-        if calculator.complexity > 10 {
+        // Threshold should come from config, hardcoded to 30 for now
+        if calculator.complexity > 30 {
             let loc = node.startLocation(converter: converter)
             
             findings.append(Finding(
                 ruleId: ruleId,
-                message: "Function '\(node.name.text)' has high cyclomatic complexity (\(calculator.complexity)). Max allowed is 10.",
+                message: "Function '\(node.name.text)' has high cyclomatic complexity (\(calculator.complexity)). Max allowed is 30.",
                 file: file,
                 line: loc.line,
                 column: loc.column
