@@ -1,4 +1,4 @@
-import SwiftSyntax
+@_exported import SwiftSyntax
 
 public protocol Rule {
     var id: String { get }
