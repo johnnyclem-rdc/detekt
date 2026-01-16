@@ -1,0 +1,77 @@
+1. Executive Summary
+SwiftDetekt will be a modular, command-line interface (CLI) tool built in Swift. It will leverage Apple's SwiftSyntax library for accurate, type-safe code analysis and llvm-cov for test coverage metrics. The architecture will mirror the original Detekt's modularity (Core, API, Rules, Reporting) to ensure extensibility and maintainability.
+2. Architecture & Modules
+The project will be structured as a Swift Package Manager (SPM) executable with the following library targets:
+| Module | Responsibility | Key Dependencies |
+| :--- | :--- | :--- |
+| SwiftDetektCLI | Entry point, argument parsing, command orchestration. | swift-argument-parser |
+| SwiftDetektCore | Analysis engine, config loading, file processing pipeline. | Yams (YAML), Foundation |
+| SwiftDetektAPI | Public protocols (Rule, Finding, Config), shared models. | None |
+| SwiftDetektRules | Implementation of standard rule sets (Complexity, Naming, etc.). | SwiftSyntax |
+| SwiftDetektReport | Generators for HTML, JSON, SARIF, and Console reports. | SwiftDetektAPI |
+| SwiftDetektCoverage | Integration with llvm-cov for coverage estimation. | Foundation (Process) |
+3. Technology Stack
+*   Language: Swift 6.0+
+*   Build System: Swift Package Manager (SPM)
+*   Parsing Engine: SwiftSyntax (https://github.com/swiftlang/swift-syntax) (Official Apple AST parser).
+*   CLI Framework: swift-argument-parser (https://github.com/apple/swift-argument-parser).
+*   Configuration: Yams (https://github.com/jpsim/Yams) (YAML parser to match Detekt's config style).
+*   Testing: XCTest (for unit testing rules).
+4. Implementation Plan
+Phase 1: Foundation (CLI & Core)
+1.  Project Setup: Initialize a new SPM executable package.
+2.  Configuration: Implement a YAML configuration loader (detekt.yml) to enable/disable rules and set thresholds (e.g., maxLineLength: 120).
+3.  File System: Create a file collection mechanism to recursively find .swift files, respecting .gitignore or a custom excludes list.
+Phase 2: Static Analysis Engine (The "Brain")
+1.  Rule Protocol: Define the contract for a rule.
+        protocol Rule {
+        var id: String { get }
+        func visit(_ root: SourceFileSyntax) -> [Finding]
+    }
+    2.  Visitor Implementation: Implement a base SyntaxVisitor that rules can inherit from to traverse the Abstract Syntax Tree (AST) efficiently.
+3.  Pipeline: Build the Detekt engine class that:
+    *   Reads a file.
+    *   Parses it into SourceFileSyntax.
+    *   Runs enabled rules against the syntax tree.
+    *   Aggregates Findings.
+Phase 3: Rule Sets (Replicating Detekt Features)
+We will implement a subset of core Detekt rules adapted for Swift:
+*   Complexity:
+    *   CyclomaticComplexity: Count decision points (if, guard, switch, loops).
+    *   LongMethod: Count lines in functions.
+    *   LongParameterList: Count function parameters.
+*   Naming:
+    *   FunctionNaming: Verify camelCase.
+    *   TypeNaming: Verify PascalCase.
+*   EmptyBlocks: Detect empty if, do, or catch blocks.
+*   PotentialBugs: Detect forced unwrapping (!) (configurable).
+Phase 4: Reporting
+1.  Console Reporter: Colored output (Red for errors, Yellow for warnings) printing file path, line, and message.
+2.  HTML/Markdown: Generate a static report file summarizing metrics and findings.
+Phase 5: Test Coverage Estimation
+Detekt (Kotlin) usually relies on Jacoco/Kover. For Swift, we will integrate directly with the toolchain.
+1.  Command: swiftdetekt coverage
+2.  Execution:
+    *   Run swift test --enable-code-coverage (or xcodebuild ... -enableCodeCoverage YES).
+    *   Locate the resulting .xcresult or .profdata.
+3.  Analysis:
+    *   Execute llvm-cov export -format=json ... to dump coverage data.
+    *   Parse the JSON to calculate the total percentage: (covered_lines / executable_lines) * 100.
+    *   Print a summary: "Total Coverage: 84.5%".
+5. Detailed Steps to Start
+1.  Initialize Package:
+    mkdir SwiftDetekt && cd SwiftDetekt && swift package init --type executable
+2.  Add Dependencies:
+    Edit Package.swift to include swift-syntax, swift-argument-parser, and yams.
+3.  Scaffold Directory:
+    Create folders matching the module structure (Core, API, Rules).
+4.  Draft Protocols: Define Rule and Finding in Sources/SwiftDetektAPI.
+5.  Write First Rule: Implement CyclomaticComplexityRule using SwiftSyntax.
+6. Risks & Mitigation
+*   SwiftSyntax Versioning: SwiftSyntax is tied closely to the Swift compiler version. Mitigation: Lock the dependency to a specific stable version (e.g., 510.0.0 for Swift 5.10) and update periodically.
+*   Performance: Parsing thousands of files can be slow. Mitigation: Implement concurrent file processing using Swift Concurrency (TaskGroup) in the Core engine.
+7. Proposed CLI Usage
+# Analyze code
+$ swiftdetekt analyze --input ./Sources --config detekt.yml --report html:report.html
+# Check Coverage
+$ swiftdetekt coverage --project MyProject.xcodeproj --scheme MyScheme
