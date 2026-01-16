@@ -42,6 +42,12 @@ struct Analyze: ParsableCommand {
             throw ExitCode.validationFailure
         }
         
+        if !files.isEmpty {
+            print("Analyzing \(files.count) files...")
+        } else {
+             print("No Swift files found to analyze at path: \(inputPath)")
+        }
+
         let engine = DetektEngine()
         let findings = try engine.run(files: files)
         
@@ -50,6 +56,8 @@ struct Analyze: ParsableCommand {
         
         if !findings.isEmpty {
             throw ExitCode.failure // Exit with error code if findings exist (typical linter behavior)
+        } else {
+             print("Analysis complete.")
         }
     }
 }
